@@ -1,7 +1,11 @@
 ﻿using CityInfo.API.Models;
+using CityInfo.API.Services;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace CityInfo.API.Controllers
 {
@@ -10,15 +14,30 @@ namespace CityInfo.API.Controllers
     [Route("api/cities/{cityId}/pointsofinterest")]
     public class PointsOfInterestController : ControllerBase
     {
+        private readonly ILogger<PointsOfInterestController> _logger;
+        private readonly IMailService _mailService;
+
+        public PointsOfInterestController(ILogger<PointsOfInterestController> logger, IMailService mailService)
+        {
+            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+            _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
+        }
+
+
         [HttpGet]
         public IActionResult GetPointsOfInterest(int cityId)
         {
-            var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
+            return Execute(() =>
+            {
+                var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
 
-            if (city == null)
-                return NotFound();
-
-            return Ok(city.PointsOfInterest);
+                if (city == null)
+                {
+                    _logger.LogInformation("City with the cityId={cityId} was not found", cityId);
+                    return NotFound();
+                }
+                return Ok(city.PointsOfInterest);
+            });
         }
 
         [HttpGet("{id}", Name = "GetPointOfInterest")]
@@ -134,7 +153,30 @@ namespace CityInfo.API.Controllers
 
             city.PointsOfInterest.Remove(foundPointOfInterest);
 
+            _mailService.Send("Point of interests deleted",
+                $"Point of interest {foundPointOfInterest.Name} with id {foundPointOfInterest.Id} was deleted.");
+
             return NoContent(); // 204
+        }
+
+
+        private IActionResult Execute(Func<IActionResult> func, [CallerMemberName] string methodName = "")
+        {
+            _logger.LogInformation("Start of controller method: {ControllerMethodName}; Route: {Route}", methodName, Request.Path);
+            try
+            {
+                return func();
+            }
+            catch (Exception ex)
+            {
+                var message = "Critical error happended during controller method '{0}' call";
+                _logger.LogCritical(string.Format(message, "ControllerMethodName"), methodName, ex);
+                return StatusCode(500, string.Format(message, methodName));
+            }
+            finally
+            {
+                _logger.LogInformation("End of controller method: {ControllerMethodName}", methodName);
+            }
         }
     }
 }
