@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
+﻿using CityInfo.API.Models;
+using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace CityInfo.API.Controllers
 {
@@ -22,7 +21,7 @@ namespace CityInfo.API.Controllers
             return Ok(city.PointsOfInterest);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetPointOfInterest")]
         public IActionResult GetPointOfInterest(int cityId, int id)
         {
             var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
@@ -36,6 +35,106 @@ namespace CityInfo.API.Controllers
                 return NotFound();
 
             return Ok(pointOfInterest);
+        }
+
+        [HttpPost]
+        public IActionResult CreatePointOfInterests(int cityId, [FromBody] PointOfInterestForCreationDto pointOfInterest)
+        {
+            if (pointOfInterest.Name == pointOfInterest.Description)
+                ModelState.AddModelError(nameof(pointOfInterest.Description), "The description should be different from the name");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
+            if (city == null)
+                return NotFound();
+
+            var maxIdPointsOfInterests = CitiesDataStore.Current.Cities.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
+
+            var newPointOfInterests = new PointOfInterestDto
+            {
+                Id = ++maxIdPointsOfInterests,
+                Name = pointOfInterest.Name,
+                Description = pointOfInterest.Description
+            };
+
+            city.PointsOfInterest.Add(newPointOfInterests);
+
+            return CreatedAtRoute("GetPointOfInterest", 
+                new { cityId, id = newPointOfInterests.Id }, newPointOfInterests); // 201
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult UpdatePointOfInterest(int cityId, int id, [FromBody] PointOfInterestForUpdateDto pointOfInterest)
+        {
+            if (pointOfInterest.Name == pointOfInterest.Description)
+                ModelState.AddModelError(nameof(pointOfInterest.Description), "The description should be different from the name");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
+            if (city == null)
+                return NotFound();
+
+            var foundPointOfInterest = city.PointsOfInterest.FirstOrDefault(x => x.Id == id);
+
+            if (foundPointOfInterest == null)
+                return NotFound();
+
+            foundPointOfInterest.Name = pointOfInterest.Name;
+            foundPointOfInterest.Description = pointOfInterest.Description;
+
+            return NoContent(); // 204
+        }
+
+        [HttpPatch("{id}")]
+        public IActionResult PartiallyUpdatePointOfInterest(int cityId, int id, [FromBody] JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
+        {
+            var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
+            if (city == null)
+                return NotFound();
+
+            var foundPointOfInterest = city.PointsOfInterest.FirstOrDefault(x => x.Id == id);
+            if (foundPointOfInterest == null)
+                return NotFound();
+
+            var pointOfInterestToPatch = new PointOfInterestForUpdateDto
+            {
+                Name = foundPointOfInterest.Name,
+                Description = foundPointOfInterest.Description
+            };
+
+            patchDocument.ApplyTo(pointOfInterestToPatch, ModelState);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (pointOfInterestToPatch.Name == pointOfInterestToPatch.Description)
+                ModelState.AddModelError(nameof(pointOfInterestToPatch.Description), "The description should be different from the name");
+
+            if (!TryValidateModel(pointOfInterestToPatch))
+                return BadRequest(ModelState);
+
+            foundPointOfInterest.Name = pointOfInterestToPatch.Name;
+            foundPointOfInterest.Description = pointOfInterestToPatch.Description;
+
+            return NoContent(); // 204
+        }
+
+        [HttpDelete("{id}")]
+        public IActionResult DeletePointOfInterest(int cityId, int id)
+        {
+            var city = CitiesDataStore.Current.Cities.FirstOrDefault(x => x.Id == cityId);
+            if (city == null)
+                return NotFound();
+
+            var foundPointOfInterest = city.PointsOfInterest.FirstOrDefault(x => x.Id == id);
+            if (foundPointOfInterest == null)
+                return NotFound();
+
+            city.PointsOfInterest.Remove(foundPointOfInterest);
+
+            return NoContent(); // 204
         }
     }
 }

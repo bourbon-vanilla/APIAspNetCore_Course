@@ -18,16 +18,18 @@ namespace CityInfo.API
         public void ConfigureServices(IServiceCollection services)
         {
             services
-                .AddMvc(options => {
+                .AddControllers(options =>
+                {
                     options.EnableEndpointRouting = false;
                     options.RespectBrowserAcceptHeader = true;
                     options.ReturnHttpNotAcceptable = true;
                 })
-                .AddXmlSerializerFormatters()
-                .AddJsonOptions(options =>
-                {
-                    options.JsonSerializerOptions.PropertyNamingPolicy = null; // Names as they are
-                });
+                .AddXmlDataContractSerializerFormatters()
+                .AddNewtonsoftJson();
+                //.AddJsonOptions(options =>
+                //{
+                //    options.JsonSerializerOptions.PropertyNamingPolicy = null; // Names as they are
+                //});
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
