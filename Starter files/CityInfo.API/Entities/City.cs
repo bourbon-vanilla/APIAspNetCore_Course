@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CityInfo.API.Entities
 {
-    internal class City
+    public class City
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

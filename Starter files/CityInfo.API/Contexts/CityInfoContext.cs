@@ -16,9 +16,9 @@ namespace CityInfo.API.Contexts
         }
 
 
-        DbSet<City> Cities { get; set; }
+        public DbSet<City> Cities { get; set; }
 
-        DbSet<PointOfInterest> PointsOfInterest { get; set; }
+        public DbSet<PointOfInterest> PointsOfInterest { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

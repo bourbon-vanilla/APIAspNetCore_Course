@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using AutoMapper;
 
 namespace CityInfo.API
 {
@@ -48,7 +49,10 @@ namespace CityInfo.API
                 options.UseSqlServer(_configuration["ConnectionStrings:CityInfoDB"]);
             });
 
+            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
             services.AddTransient<IMailService, LocalMailService>();
+            services.AddScoped<ICityInfoRepository, CityInfoRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
